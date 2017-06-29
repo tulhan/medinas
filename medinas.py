@@ -1,6 +1,6 @@
 # coding=utf-8
+import secrets
 import struct
-from collections import namedtuple
 from enum import IntEnum
 from typing import List
 
@@ -61,13 +61,59 @@ class Resolver(object):
 
 
 class Message(object):
-    """Represents a DNS message"""
+    """
+    Represents a DNS message
+
+    +---------------------+
+    |        Header       |
+    +---------------------+
+    |       Question      | the question for the name server
+    +---------------------+
+    |        Answer       | RRs answering the question
+    +---------------------+
+    |      Authority      | RRs pointing toward an authority
+    +---------------------+
+    |      Additional     | RRs holding additional information
+    +---------------------+
+    """
+
+    questions = []
+    answers = []
+    authorities = []
+    additional = []
 
     def __init__(self):
-        pass
+        self.id = int.from_bytes(secrets.token_bytes(2), 'big')
+        self.header_flags = HeaderFlags()
+        self.count = RecordsCount()
 
+    def add_question(self, name, qtype=None, qclass=None):
+        """Add a question record to the message"""
+        qtype = Type.A if qtype is None else qtype
+        qclass = Class.IN if qclass is None else qclass
+        self.questions.append(Question(name, qtype, qclass))
+        self.count.qd = len(self.questions)
+
+    # noinspection PyTypeChecker
     def __bytes__(self):
-        pass
+        wire = b''
+
+        wire += struct.pack('>H', self.id)
+        wire += bytes(self.header_flags)
+        wire += struct.pack('>HHHH', self.count.qd, self.count.an, self.count.ns, self.count.ar)
+        for question in self.questions:
+            wire += bytes(question)
+
+        for answer in self.answers:
+            wire += bytes(answer)
+
+        for authority in self.authorities:
+            wire += bytes(authority)
+
+        for _additional in self.additional:
+            wire += bytes(_additional)
+
+        return wire
 
     @classmethod
     def from_wire(cls, wire):
@@ -121,7 +167,14 @@ class HeaderFlags(object):
         return cls(response, opcode, authoritative, truncated, recursion_desired, recursion_available, reply_code)
 
 
-RecordsCount = namedtuple('RecordsCount', 'qd, an, ns, ar')
+class RecordsCount(object):
+    qd = 0
+    an = 0
+    ns = 0
+    ar = 0
+
+    def __init__(self):
+        pass
 
 
 class Question(object):
@@ -137,7 +190,9 @@ class Question(object):
     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
     """
 
-    def __init__(self, name: str, qtype: 'Type', qclass: 'Class'):
+    def __init__(self, name: str, qtype=None, qclass=None):
+        qtype = Type.A if qtype is None else qtype
+        qclass = Class.IN if qclass is None else qclass
         self.name = Name(name)
         self.qtype = qtype
         self.qclass = qclass

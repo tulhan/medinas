@@ -49,8 +49,15 @@ class TestName(TestCase):
         self.assertEqual(medinas.Name('www.google.com'), medinas.Name('www.google.com.'))
 
 
+# noinspection PyTypeChecker
 class TestMessage(TestCase):
-    pass
+    def test_message(self):
+        message_on_the_wire = b'\xb4\xf2\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x03\x77\x77\x77\x09\x6d\x69\x63\x72' \
+                              b'\x6f\x73\x6f\x66\x74\x03\x63\x6f\x6d\x00\x00\x01\x00\x01'
+
+        _ = medinas.Message()
+        _.add_question('www.microsoft.com', medinas.Type.A)
+        self.assertEqual(bytes(_)[2:], message_on_the_wire[2:])
 
 
 class TestHeaderFlags(TestCase):
