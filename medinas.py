@@ -5,6 +5,28 @@ from enum import Enum
 from typing import List
 
 
+def bitset(content: bytes, value: int, position: int = 0) -> bytes:
+    """Set the bits of content at the given position with value"""
+    length = len(content)
+    content = int.from_bytes(content, 'big')
+
+    mask = 0
+    mask |= value
+    mask <<= position
+
+    content |= mask
+    return content.to_bytes(length, 'big')
+
+
+def bitget(content: bytearray, position: int = 0, num_bits: int = 1) -> int:
+    """Get the num_bits bits of the content from position"""
+    content = int.from_bytes(content, 'big')
+
+    content >>= position
+    # print(content, pow(2, num_bits), content % pow(2, num_bits)
+    return content % pow(2, num_bits)
+
+
 class Resolver(object):
     """Resolves DNS queries from name servers"""
 
@@ -54,18 +76,49 @@ class Message(object):
 
 
 class HeaderFlags(object):
-    """Represents flags in a DNS message header"""
+    """
+    Represents flags in a DNS message header.
 
-    def __init__(self):
-        pass
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    |QR|   Opcode  |AA|TC|RD|RA|   Z    |   RCODE   |
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    """
+
+    def __init__(self, response=False, opcode=0, authoritative=False, truncated=False, recursion_desired=False,
+                 recursion_available=False, reply_code=0):
+        self.response = response
+        self.opcode = opcode
+        self.authoritative = authoritative
+        self.truncated = truncated
+        self.recursion_desired = recursion_desired
+        self.recursion_available = recursion_available
+        self.reply_code = reply_code
 
     def __bytes__(self):
-        pass
+        wire = b'\x00\x00'
+
+        wire = bitset(wire, self.response, 15)
+        wire = bitset(wire, self.opcode, 14)
+        wire = bitset(wire, self.authoritative, 10)
+        wire = bitset(wire, self.truncated, 9)
+        wire = bitset(wire, self.recursion_desired, 8)
+        wire = bitset(wire, self.recursion_available, 7)
+        wire = bitset(wire, self.reply_code)
+
+        return wire
 
     @classmethod
     def from_wire(cls, wire):
         """Convert DNS header flags from binary to a HeaderFlags object"""
-        pass
+        response = bitget(wire, 15)
+        opcode = bitget(wire, 11, 3)
+        authoritative = bitget(wire, 10)
+        truncated = bitget(wire, 9)
+        recursion_desired = bitget(wire, 8)
+        recursion_available = bitget(wire, 7)
+        reply_code = bitget(wire, num_bits=4)
+
+        return cls(response, opcode, authoritative, truncated, recursion_desired, recursion_available, reply_code)
 
 
 RecordsCount = namedtuple('RecordsCount', 'qd, an, ns, ar')

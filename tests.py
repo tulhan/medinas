@@ -2,7 +2,7 @@
 import unittest
 from unittest import TestCase
 
-from medinas import Name
+import medinas
 
 
 @unittest.skip('Not Implemented')
@@ -28,25 +28,25 @@ class TestResolver(unittest.TestCase):
 
 class TestName(TestCase):
     def test_name(self):
-        _ = Name('www.google.com')
+        _ = medinas.Name('www.google.com')
         self.assertEqual(_.__bytes__(), b'\x03\x77\x77\x77\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00')
 
-        _ = Name('gen.lib.rus.ec')
+        _ = medinas.Name('gen.lib.rus.ec')
         self.assertEqual(_.__bytes__(), b'\x03\x67\x65\x6e\x03\x6c\x69\x62\x03\x72\x75\x73\x02\x65\x63\x00')
 
-        _ = Name('www.microsoft.com.')
+        _ = medinas.Name('www.microsoft.com.')
         self.assertEqual(_.__bytes__(), b'\x03\x77\x77\x77\x09\x6d\x69\x63\x72\x6f\x73\x6f\x66\x74\x03\x63\x6f\x6d\x00')
 
-        _ = Name.from_wire(b'\x03\x77\x77\x77\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00')
+        _ = medinas.Name.from_wire(b'\x03\x77\x77\x77\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00')
         self.assertEqual(str(_), 'www.google.com')
 
-        _ = Name.from_wire(b'\x03\x67\x65\x6e\x03\x6c\x69\x62\x03\x72\x75\x73\x02\x65\x63\x00')
+        _ = medinas.Name.from_wire(b'\x03\x67\x65\x6e\x03\x6c\x69\x62\x03\x72\x75\x73\x02\x65\x63\x00')
         self.assertEqual(str(_), 'gen.lib.rus.ec')
 
-        _ = Name.from_wire(b'\x03\x77\x77\x77\x09\x6d\x69\x63\x72\x6f\x73\x6f\x66\x74\x03\x63\x6f\x6d\x00')
+        _ = medinas.Name.from_wire(b'\x03\x77\x77\x77\x09\x6d\x69\x63\x72\x6f\x73\x6f\x66\x74\x03\x63\x6f\x6d\x00')
         self.assertEqual(str(_), 'www.microsoft.com')
 
-        self.assertEqual(Name('www.google.com'), Name('www.google.com.'))
+        self.assertEqual(medinas.Name('www.google.com'), medinas.Name('www.google.com.'))
 
 
 class TestMessage(TestCase):
@@ -54,7 +54,31 @@ class TestMessage(TestCase):
 
 
 class TestHeaderFlags(TestCase):
-    pass
+    def test_header_flags(self):
+        _ = medinas.HeaderFlags(recursion_desired=True)
+        self.assertEqual(_.__bytes__(), b'\x01\x00')
+
+        _ = medinas.HeaderFlags(response=True, authoritative=True, recursion_desired=True, recursion_available=True,
+                                reply_code=3)
+        self.assertEqual(_.__bytes__(), b'\x85\x83')
+
+        _ = medinas.HeaderFlags.from_wire(b'\x01\x00')
+        self.assertEqual(_.response, False)
+        self.assertEqual(_.opcode, 0)
+        self.assertEqual(_.authoritative, False)
+        self.assertEqual(_.truncated, False)
+        self.assertEqual(_.recursion_desired, True)
+        self.assertEqual(_.recursion_available, False)
+        self.assertEqual(_.reply_code, 0)
+
+        _ = medinas.HeaderFlags.from_wire(b'\x85\x83')
+        self.assertEqual(_.response, True)
+        self.assertEqual(_.opcode, 0)
+        self.assertEqual(_.authoritative, True)
+        self.assertEqual(_.truncated, False)
+        self.assertEqual(_.recursion_desired, True)
+        self.assertEqual(_.recursion_available, True)
+        self.assertEqual(_.reply_code, 3)
 
 
 class TestQuestion(TestCase):
