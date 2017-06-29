@@ -84,7 +84,7 @@ class HeaderFlags(object):
     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
     """
 
-    def __init__(self, response=False, opcode=0, authoritative=False, truncated=False, recursion_desired=False,
+    def __init__(self, response=False, opcode=0, authoritative=False, truncated=False, recursion_desired=True,
                  recursion_available=False, reply_code=0):
         self.response = response
         self.opcode = opcode
