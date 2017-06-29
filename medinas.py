@@ -1,7 +1,7 @@
 # coding=utf-8
 import struct
 from collections import namedtuple
-from enum import Enum
+from enum import IntEnum
 from typing import List
 
 
@@ -125,21 +125,43 @@ RecordsCount = namedtuple('RecordsCount', 'qd, an, ns, ar')
 
 
 class Question(object):
-    """Represents a DNS question section"""
+    """
+    Represents a DNS question section
 
-    def __init__(self):
-        pass
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    //                    QNAME                    //
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    |                     QTYPE                     |
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    |                     QCLASS                    |
+    +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+    """
 
+    def __init__(self, name: str, qtype: 'Type', qclass: 'Class'):
+        self.name = Name(name)
+        self.qtype = qtype
+        self.qclass = qclass
+
+    # noinspection PyTypeChecker
     def __bytes__(self):
-        pass
+        wire = b''
+
+        wire += bytes(self.name)
+        wire += struct.pack('>H', self.qtype)
+        wire += struct.pack('>H', self.qclass)
+        return wire
 
     @classmethod
     def from_wire(cls, wire):
         """Encodes a DNS question section from binary to a Question object"""
-        pass
+        name, rest = Name.split_by_name(wire)
+        name = Name.from_wire(name)
+        (qtype, qclass) = struct.unpack('>HH', rest)
+
+        return cls(name, qtype, qclass)
 
 
-class Type(Enum):
+class Type(IntEnum):
     """Enumeration of DNS types"""
     A = 1
     NS = 2
@@ -152,7 +174,7 @@ class Type(Enum):
     ANY = 255
 
 
-class Class(Enum):
+class Class(IntEnum):
     """Enumeration of DNS classes"""
     IN = 1
     CH = 2
@@ -287,7 +309,7 @@ class Name(object):
         return wire
 
     def __str__(self):
-        return self.domain_name
+        return str(self.domain_name)
 
     def __eq__(self, other):
         return self.__bytes__() == bytes(other)
@@ -310,6 +332,24 @@ class Name(object):
         domain_name = '.'.join(labels)
 
         return cls(domain_name)
+
+    @staticmethod
+    def split_by_name(wire: bytes):
+        """Encodes DNS labels wire format into a Name class"""
+        labels = b''
+
+        while wire[0] != 0:
+            _len = int(wire[0])
+            if _len > 63:
+                raise DNSDecodeError()
+
+            labels += wire[:_len + 1]
+            wire = wire[_len + 1:]
+
+        labels += wire[:1]
+        wire = wire[1:]
+
+        return labels, wire
 
 
 class DNSDecodeError(ValueError):

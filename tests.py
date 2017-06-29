@@ -82,7 +82,17 @@ class TestHeaderFlags(TestCase):
 
 
 class TestQuestion(TestCase):
-    pass
+    def test_question(self):
+        _ = medinas.Question('www.microsoft.com', medinas.Type.A, medinas.Class.IN).__bytes__()
+        self.assertEqual(_,
+                         b'\x03\x77\x77\x77\x09\x6d\x69\x63\x72\x6f\x73\x6f\x66\x74\x03\x63\x6f\x6d\x00\x00\x01\x00\x01')
+
+        _ = medinas.Question.from_wire(
+            b'\x03\x77\x77\x77\x09\x6d\x69\x63\x72\x6f\x73\x6f\x66\x74\x03\x63\x6f\x6d\x00\x00\x01\x00\x01')
+
+        self.assertEqual(str(_.name), 'www.microsoft.com')
+        self.assertEqual(_.qtype, medinas.Type.A)
+        self.assertEqual(_.qclass, medinas.Class.IN)
 
 
 class TestResourceRecord(TestCase):
