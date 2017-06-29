@@ -49,5 +49,45 @@ class TestName(TestCase):
         self.assertEqual(Name('www.google.com'), Name('www.google.com.'))
 
 
+class TestMessage(TestCase):
+    pass
+
+
+class TestHeaderFlags(TestCase):
+    pass
+
+
+class TestQuestion(TestCase):
+    pass
+
+
+class TestResourceRecord(TestCase):
+    pass
+
+
+class TestA(TestCase):
+    pass
+
+
+class TestCNAME(TestCase):
+    pass
+
+
+class TestSOA(TestCase):
+    pass
+
+
+class TestPTR(TestCase):
+    pass
+
+
+class TestMX(TestCase):
+    pass
+
+
+class TestTXT(TestCase):
+    pass
+
+
 if __name__ == '__main__':
     unittest.main()

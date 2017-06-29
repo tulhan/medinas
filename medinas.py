@@ -1,5 +1,7 @@
 # coding=utf-8
 import struct
+from collections import namedtuple
+from enum import Enum
 from typing import List
 
 
@@ -36,6 +38,180 @@ class Resolver(object):
         pass
 
 
+class Message(object):
+    """Represents a DNS message"""
+
+    def __init__(self):
+        pass
+
+    def __bytes__(self):
+        pass
+
+    @classmethod
+    def from_wire(cls, wire):
+        """Encodes a DNS message from binary to a Message object"""
+        pass
+
+
+class HeaderFlags(object):
+    """Represents flags in a DNS message header"""
+
+    def __init__(self):
+        pass
+
+    def __bytes__(self):
+        pass
+
+    @classmethod
+    def from_wire(cls, wire):
+        """Convert DNS header flags from binary to a HeaderFlags object"""
+        pass
+
+
+RecordsCount = namedtuple('RecordsCount', 'qd, an, ns, ar')
+
+
+class Question(object):
+    """Represents a DNS question section"""
+
+    def __init__(self):
+        pass
+
+    def __bytes__(self):
+        pass
+
+    @classmethod
+    def from_wire(cls, wire):
+        """Encodes a DNS question section from binary to a Question object"""
+        pass
+
+
+class Type(Enum):
+    """Enumeration of DNS types"""
+    A = 1
+    NS = 2
+    CNAME = 5
+    SOA = 6
+    PTR = 12
+    MX = 15
+    TXT = 16
+    AXFR = 252
+    ANY = 255
+
+
+class Class(Enum):
+    """Enumeration of DNS classes"""
+    IN = 1
+    CH = 2
+    HS = 4
+    ANY = 255
+
+
+class ResourceRecord(object):
+    """Represents a DNS resource record"""
+
+    def __init__(self):
+        pass
+
+    def __bytes__(self):
+        pass
+
+    @classmethod
+    def from_wire(cls, wire):
+        """Encodes a DNS resource record from binary to a ResourceRecord object"""
+        pass
+
+
+class A(ResourceRecord):
+    """Represents a DNS A record"""
+
+    def __init__(self):
+        super().__init__()
+
+    def __bytes__(self):
+        pass
+
+    @classmethod
+    def from_wire(cls, wire):
+        """Encodes a DNS A record from binary to an A object"""
+        pass
+
+
+class CNAME(ResourceRecord):
+    """Represents a DNS CNAME record"""
+
+    def __init__(self):
+        super().__init__()
+
+    def __bytes__(self):
+        pass
+
+    @classmethod
+    def from_wire(cls, wire):
+        """Encodes a DNS CNAME record from binary to an CNAME object"""
+        pass
+
+
+class SOA(ResourceRecord):
+    """Represents a DNS SOA record"""
+
+    def __init__(self):
+        super().__init__()
+
+    def __bytes__(self):
+        pass
+
+    @classmethod
+    def from_wire(cls, wire):
+        """Encodes a DNS SOA record from binary to an SOA object"""
+        pass
+
+
+class PTR(ResourceRecord):
+    """Represents a DNS PTR record"""
+
+    def __init__(self):
+        super().__init__()
+
+    def __bytes__(self):
+        pass
+
+    @classmethod
+    def from_wire(cls, wire):
+        """Encodes a DNS PTR record from binary to a PTR object"""
+        pass
+
+
+class MX(ResourceRecord):
+    """Represents a DNS MX record"""
+
+    def __init__(self):
+        super().__init__()
+
+    def __bytes__(self):
+        pass
+
+    @classmethod
+    def from_wire(cls, wire):
+        """Encodes a DNS MX record from binary to a MX object"""
+        pass
+
+
+class TXT(ResourceRecord):
+    """Represents a DNS TXT record"""
+
+    def __init__(self):
+        super().__init__()
+
+    def __bytes__(self):
+        pass
+
+    @classmethod
+    def from_wire(cls, wire):
+        """Encodes a DNS TXT record from binary to a TXT object"""
+        pass
+
+
 class Name(object):
     """Stores a string and coverts it into DNS label wire format"""
     domain_name = ''
@@ -65,7 +241,7 @@ class Name(object):
 
     @classmethod
     def from_wire(cls, wire: bytes):
-        """Converts DNS labels wire format into a Name class"""
+        """Encodes DNS labels wire format into a Name class"""
         labels = []
 
         while wire[0] != 0:
