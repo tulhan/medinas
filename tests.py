@@ -59,22 +59,22 @@ class TestMessage(TestCase):
         message_on_the_wire = b'\xb4\xf2\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x03\x77\x77\x77\x09\x6d\x69\x63\x72' \
                               b'\x6f\x73\x6f\x66\x74\x03\x63\x6f\x6d\x00\x00\x01\x00\x01'
 
-        _ = medinas.Message()
-        _.add_question('www.microsoft.com', medinas.Type.A)
+        _ = medinas.Message(('www.microsoft.com', medinas.Type.A))
         self.assertEqual(bytes(_)[2:], message_on_the_wire[2:])
 
         _ = medinas.Message.from_wire(message_on_the_wire)
         self.assertEqual(_.header.id, struct.unpack('>H', b'\xb4\xf2'))
         self.assertEqual(_.header.count.qd, 1)
-        self.assertEqual(str(_.questions[0].name), 'www.microsoft.com')
+        self.assertEqual(str(_.question.name), 'www.microsoft.com')
 
 
+# noinspection PyTypeChecker
 class TestMessageHeader(TestCase):
     def test_message_header(self):
         x = b'\xc2\xf5\x01\x00\x00\x01\x00\x00\x00\x00\x00\x01'
         flags = medinas.HeaderFlags()
-        count = medinas.RecordsCount(1, 0, 0, 1)
-        _ = medinas.MessageHeader(None, flags, count)
+        count = medinas.RecordsCount(ar=1)
+        _ = medinas.MessageHeader(flags=flags, count=count)
         self.assertEqual(bytes(_)[2:], x[2:])
 
 
@@ -83,8 +83,7 @@ class TestHeaderFlags(TestCase):
         _ = medinas.HeaderFlags(rd=True)
         self.assertEqual(_.__bytes__(), b'\x01\x00')
 
-        _ = medinas.HeaderFlags(qr=True, aa=True, rd=True, ra=True,
-                                rcode=3)
+        _ = medinas.HeaderFlags(qr=True, aa=True, rd=True, ra=True, rcode=3)
         self.assertEqual(_.__bytes__(), b'\x85\x83')
 
         _, rest = medinas.HeaderFlags.extract_from_wire(b'\x01\x00')
@@ -109,7 +108,7 @@ class TestHeaderFlags(TestCase):
 class TestRecordsCount(TestCase):
     def test_records_count(self):
         x = b'\x00\x01\x00\x02\x00\x03\x00\x04'
-        _ = medinas.RecordsCount(1, 2, 3, 4)
+        _ = medinas.RecordsCount(2, 3, 4)
         self.assertEqual(bytes(_), x)
 
         _, rest = medinas.RecordsCount.extract_from_wire(x)

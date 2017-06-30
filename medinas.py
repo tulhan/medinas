@@ -77,28 +77,22 @@ class Message(object):
     +---------------------+
     """
 
-    def __init__(self, header: 'MessageHeader' = None, questions: List = None, answers: List = None,
-                 authorities: List = None, additional: List = None):
+    def __init__(self, question: 'Question', header=None):
         self.header = MessageHeader() if header is None else header
-        self.questions = [] if questions is None else questions
-        self.answers = [] if answers is None else answers
-        self.authorities = [] if authorities is None else authorities
-        self.additional = [] if additional is None else additional
 
-    def add_question(self, name: str, qtype: 'Type' = None, qclass: 'Class' = None) -> None:
-        """Add a question record to the message"""
-        qtype = Type.A if qtype is None else qtype
-        qclass = Class.IN if qclass is None else qclass
-        self.questions.append(Question(name, qtype, qclass))
-        self.header.count.qd = len(self.questions)
+        if isinstance(question, tuple):
+            self.question = Question(*question)
+        elif isinstance(question, Question):
+            self.question = question
+
+        self.answers = []
+        self.authorities = []
+        self.additional = []
 
     # noinspection PyTypeChecker
     def __bytes__(self) -> bytes:
-
         wire = bytes(self.header)
-
-        for question in self.questions:
-            wire += bytes(question)
+        wire += bytes(self.question)
 
         for answer in self.answers:
             wire += bytes(answer)
@@ -115,13 +109,10 @@ class Message(object):
     def from_wire(cls, wire):
         """Encodes a DNS message from binary to a Message object"""
         header, wire = MessageHeader.extract_from_wire(wire)
-        questions = []
 
-        for _ in range(header.count.qd):
-            question, wire = Question.extract_from_wire(wire)
-            questions.append(question)
+        question, wire = Question.extract_from_wire(wire)
 
-        return cls(header, questions)
+        return cls(question, header)
 
 
 class MessageHeader(object):
@@ -159,7 +150,7 @@ class HeaderFlags(object):
     """
 
     def __init__(self, qr: bool = False, opcode: int = 0, aa: bool = False, tc: bool = False, rd: bool = True,
-                 ra: bool = False, rcode: bool = 0):
+                 ra: bool = False, rcode: int = 0):
         self.qr = qr
         self.opcode = opcode
         self.aa = aa
@@ -200,8 +191,8 @@ class HeaderFlags(object):
 class RecordsCount(object):
     """Stores counts of records in message"""
 
-    def __init__(self, qd: int = 0, an: int = 0, ns: int = 0, ar: int = 0):
-        self.qd, self.an, self.ns, self.ar = qd, an, ns, ar
+    def __init__(self, an: int = 0, ns: int = 0, ar: int = 0):
+        self.qd, self.an, self.ns, self.ar = 1, an, ns, ar
 
     def __bytes__(self):
         return struct.pack('>HHHH', self.qd, self.an, self.ns, self.ar)
@@ -213,7 +204,7 @@ class RecordsCount(object):
         wire = wire[8:]
 
         qd, an, ns, ar = struct.unpack('>HHHH', counts)
-        return cls(qd, an, ns, ar), wire
+        return cls(an, ns, ar), wire
 
 
 class Question(object):
