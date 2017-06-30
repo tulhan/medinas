@@ -37,13 +37,16 @@ class TestName(TestCase):
         _ = medinas.Name('www.microsoft.com.')
         self.assertEqual(_.__bytes__(), b'\x03\x77\x77\x77\x09\x6d\x69\x63\x72\x6f\x73\x6f\x66\x74\x03\x63\x6f\x6d\x00')
 
-        _ = medinas.Name.from_wire(b'\x03\x77\x77\x77\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00')
+        _, rest = medinas.Name.extract_from_wire(
+            b'\x03\x77\x77\x77\x06\x67\x6f\x6f\x67\x6c\x65\x03\x63\x6f\x6d\x00\x01\x02')
         self.assertEqual(str(_), 'www.google.com')
+        self.assertEqual(rest, b'\x01\x02')
 
-        _ = medinas.Name.from_wire(b'\x03\x67\x65\x6e\x03\x6c\x69\x62\x03\x72\x75\x73\x02\x65\x63\x00')
+        _, rest = medinas.Name.extract_from_wire(b'\x03\x67\x65\x6e\x03\x6c\x69\x62\x03\x72\x75\x73\x02\x65\x63\x00')
         self.assertEqual(str(_), 'gen.lib.rus.ec')
 
-        _ = medinas.Name.from_wire(b'\x03\x77\x77\x77\x09\x6d\x69\x63\x72\x6f\x73\x6f\x66\x74\x03\x63\x6f\x6d\x00')
+        _, rest = medinas.Name.extract_from_wire(
+            b'\x03\x77\x77\x77\x09\x6d\x69\x63\x72\x6f\x73\x6f\x66\x74\x03\x63\x6f\x6d\x00')
         self.assertEqual(str(_), 'www.microsoft.com')
 
         self.assertEqual(medinas.Name('www.google.com'), medinas.Name('www.google.com.'))
@@ -94,12 +97,12 @@ class TestQuestion(TestCase):
         self.assertEqual(_,
                          b'\x03\x77\x77\x77\x09\x6d\x69\x63\x72\x6f\x73\x6f\x66\x74\x03\x63\x6f\x6d\x00\x00\x01\x00\x01')
 
-        _ = medinas.Question.from_wire(
-            b'\x03\x77\x77\x77\x09\x6d\x69\x63\x72\x6f\x73\x6f\x66\x74\x03\x63\x6f\x6d\x00\x00\x01\x00\x01')
-
+        _, rest = medinas.Question.extract_from_wire(
+            b'\x03\x77\x77\x77\x09\x6d\x69\x63\x72\x6f\x73\x6f\x66\x74\x03\x63\x6f\x6d\x00\x00\x01\x00\x01\x01\x02')
         self.assertEqual(str(_.name), 'www.microsoft.com')
         self.assertEqual(_.qtype, medinas.Type.A)
         self.assertEqual(_.qclass, medinas.Class.IN)
+        self.assertEqual(rest, b'\x01\x02')
 
 
 class TestResourceRecord(TestCase):

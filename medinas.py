@@ -207,13 +207,13 @@ class Question(object):
         return wire
 
     @classmethod
-    def from_wire(cls, wire):
-        """Encodes a DNS question section from binary to a Question object"""
-        name, rest = Name.split_by_name(wire)
-        name = Name.from_wire(name)
-        (qtype, qclass) = struct.unpack('>HH', rest)
+    def extract_from_wire(cls, wire):
+        """Extract a question section from the wire dump"""
+        name, wire = Name.extract_from_wire(wire)
+        (qtype, qclass) = struct.unpack('>HH', wire[:4])
+        wire = wire[4:]
 
-        return cls(name, qtype, qclass)
+        return cls(name, qtype, qclass), wire
 
 
 class Type(IntEnum):
@@ -370,41 +370,26 @@ class Name(object):
         return self.__bytes__() == bytes(other)
 
     @classmethod
-    def from_wire(cls, wire: bytes):
-        """Encodes DNS labels wire format into a Name class"""
+    def extract_from_wire(cls, wire: bytes):
+        """Extracts a name from the start of a wire dump"""
         labels = []
 
-        while wire[0] != 0:
-            _len = int(wire[0])
-            if _len > 63:
+        while True:
+            offset = int(wire[0]) + 1
+            if offset > 64 or offset == 0:
                 raise DNSDecodeError()
 
-            label = wire[1:_len + 1]
-            wire = wire[_len + 1:]
+            label = wire[1:offset]
+            wire = wire[offset:]
 
-            labels.append(label.decode(encoding='utf-8'))
+            if offset != 1:
+                labels.append(label.decode(encoding='utf-8'))
+            else:
+                break
 
         domain_name = '.'.join(labels)
 
-        return cls(domain_name)
-
-    @staticmethod
-    def split_by_name(wire: bytes):
-        """Encodes DNS labels wire format into a Name class"""
-        labels = b''
-
-        while wire[0] != 0:
-            _len = int(wire[0])
-            if _len > 63:
-                raise DNSDecodeError()
-
-            labels += wire[:_len + 1]
-            wire = wire[_len + 1:]
-
-        labels += wire[:1]
-        wire = wire[1:]
-
-        return labels, wire
+        return cls(domain_name), wire
 
 
 class DNSDecodeError(ValueError):
