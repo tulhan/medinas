@@ -77,30 +77,26 @@ class Message(object):
     +---------------------+
     """
 
-    questions = []
-    answers = []
-    authorities = []
-    additional = []
+    def __init__(self, header: 'MessageHeader' = None, questions: List = None, answers: List = None,
+                 authorities: List = None, additional: List = None):
+        self.header = MessageHeader() if header is None else header
+        self.questions = [] if questions is None else questions
+        self.answers = [] if answers is None else answers
+        self.authorities = [] if authorities is None else authorities
+        self.additional = [] if additional is None else additional
 
-    def __init__(self):
-        self.id = int.from_bytes(secrets.token_bytes(2), 'big')
-        self.header_flags = HeaderFlags()
-        self.count = RecordsCount()
-
-    def add_question(self, name, qtype=None, qclass=None):
+    def add_question(self, name: str, qtype: 'Type' = None, qclass: 'Class' = None) -> None:
         """Add a question record to the message"""
         qtype = Type.A if qtype is None else qtype
         qclass = Class.IN if qclass is None else qclass
         self.questions.append(Question(name, qtype, qclass))
-        self.count.qd = len(self.questions)
+        self.header.count.qd = len(self.questions)
 
     # noinspection PyTypeChecker
-    def __bytes__(self):
-        wire = b''
+    def __bytes__(self) -> bytes:
 
-        wire += struct.pack('>H', self.id)
-        wire += bytes(self.header_flags)
-        wire += struct.pack('>HHHH', self.count.qd, self.count.an, self.count.ns, self.count.ar)
+        wire = bytes(self.header)
+
         for question in self.questions:
             wire += bytes(question)
 
@@ -121,6 +117,31 @@ class Message(object):
         pass
 
 
+class MessageHeader(object):
+    """Represents a DNS message header"""
+
+    def __init__(self, id=None, flags=None, count=None):
+        self.id = int.from_bytes(secrets.token_bytes(2), 'big') if id is None else id
+        self.flags = HeaderFlags() if flags is None else flags
+        self.count = RecordsCount() if count is None else count
+
+    def __bytes__(self):
+        wire = struct.pack('>H', self.id)
+        wire += bytes(self.flags)
+        wire += bytes(self.count)
+
+        return wire
+
+    @classmethod
+    def extract_from_wire(cls, wire):
+        """Extracts message header from wire dump"""
+        id, wire = wire[:2], wire[2:]
+        id = struct.unpack('>H', id)
+        flags, wire = HeaderFlags.extract_from_wire(wire[2:])
+        count, wire = RecordsCount.extract_from_wire(wire)
+        return cls(id, flags, count), wire
+
+
 class HeaderFlags(object):
     """
     Represents flags in a DNS message header.
@@ -130,51 +151,61 @@ class HeaderFlags(object):
     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
     """
 
-    def __init__(self, response=False, opcode=0, authoritative=False, truncated=False, recursion_desired=True,
-                 recursion_available=False, reply_code=0):
-        self.response = response
+    def __init__(self, qr: bool = False, opcode: int = 0, aa: bool = False, tc: bool = False, rd: bool = True,
+                 ra: bool = False, rcode: bool = 0):
+        self.qr = qr
         self.opcode = opcode
-        self.authoritative = authoritative
-        self.truncated = truncated
-        self.recursion_desired = recursion_desired
-        self.recursion_available = recursion_available
-        self.reply_code = reply_code
+        self.aa = aa
+        self.tc = tc
+        self.rd = rd
+        self.ra = ra
+        self.rcode = rcode
 
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         wire = b'\x00\x00'
 
-        wire = bitset(wire, self.response, 15)
+        wire = bitset(wire, self.qr, 15)
         wire = bitset(wire, self.opcode, 14)
-        wire = bitset(wire, self.authoritative, 10)
-        wire = bitset(wire, self.truncated, 9)
-        wire = bitset(wire, self.recursion_desired, 8)
-        wire = bitset(wire, self.recursion_available, 7)
-        wire = bitset(wire, self.reply_code)
+        wire = bitset(wire, self.aa, 10)
+        wire = bitset(wire, self.tc, 9)
+        wire = bitset(wire, self.rd, 8)
+        wire = bitset(wire, self.ra, 7)
+        wire = bitset(wire, self.rcode)
 
         return wire
 
     @classmethod
-    def from_wire(cls, wire):
+    def extract_from_wire(cls, wire):
         """Convert DNS header flags from binary to a HeaderFlags object"""
-        response = bitget(wire, 15)
-        opcode = bitget(wire, 11, 3)
-        authoritative = bitget(wire, 10)
-        truncated = bitget(wire, 9)
-        recursion_desired = bitget(wire, 8)
-        recursion_available = bitget(wire, 7)
-        reply_code = bitget(wire, num_bits=4)
+        flags = wire[:2]
+        wire = wire[2:]
+        qr = bitget(flags, 15)
+        opcode = bitget(flags, 11, 3)
+        aa = bitget(flags, 10)
+        tc = bitget(flags, 9)
+        rd = bitget(flags, 8)
+        ra = bitget(flags, 7)
+        rcode = bitget(flags, num_bits=4)
 
-        return cls(response, opcode, authoritative, truncated, recursion_desired, recursion_available, reply_code)
+        return cls(qr, opcode, aa, tc, rd, ra, rcode), wire
 
 
 class RecordsCount(object):
-    qd = 0
-    an = 0
-    ns = 0
-    ar = 0
+    """Stores counts of records in message"""
 
-    def __init__(self):
-        pass
+    def __init__(self, qd: int = 0, an: int = 0, ns: int = 0, ar: int = 0):
+        self.qd, self.an, self.ns, self.ar = qd, an, ns, ar
+
+    def __bytes__(self):
+        return struct.pack('>HHHH', self.qd, self.an, self.ns, self.ar)
+
+    @classmethod
+    def extract_from_wire(cls, wire):
+        """Extract count of records in message header from wire dump"""
+        counts = wire[:8]
+        wire = wire[8:]
+
+        return cls(struct.unpack('>HHHH', counts)), wire
 
 
 class Question(object):
@@ -198,7 +229,7 @@ class Question(object):
         self.qclass = qclass
 
     # noinspection PyTypeChecker
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         wire = b''
 
         wire += bytes(self.name)
@@ -349,7 +380,7 @@ class Name(object):
     def __init__(self, domain_name: str):
         self.domain_name = domain_name
 
-    def __bytes__(self):
+    def __bytes__(self) -> bytes:
         if not self.domain_name.endswith('.'):
             self.domain_name = '{}.'.format(self.domain_name)
 
@@ -363,10 +394,10 @@ class Name(object):
 
         return wire
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.domain_name)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return self.__bytes__() == bytes(other)
 
     @classmethod

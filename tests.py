@@ -65,30 +65,30 @@ class TestMessage(TestCase):
 
 class TestHeaderFlags(TestCase):
     def test_header_flags(self):
-        _ = medinas.HeaderFlags(recursion_desired=True)
+        _ = medinas.HeaderFlags(rd=True)
         self.assertEqual(_.__bytes__(), b'\x01\x00')
 
-        _ = medinas.HeaderFlags(response=True, authoritative=True, recursion_desired=True, recursion_available=True,
-                                reply_code=3)
+        _ = medinas.HeaderFlags(qr=True, aa=True, rd=True, ra=True,
+                                rcode=3)
         self.assertEqual(_.__bytes__(), b'\x85\x83')
 
-        _ = medinas.HeaderFlags.from_wire(b'\x01\x00')
-        self.assertEqual(_.response, False)
+        _, rest = medinas.HeaderFlags.extract_from_wire(b'\x01\x00')
+        self.assertEqual(_.qr, False)
         self.assertEqual(_.opcode, 0)
-        self.assertEqual(_.authoritative, False)
-        self.assertEqual(_.truncated, False)
-        self.assertEqual(_.recursion_desired, True)
-        self.assertEqual(_.recursion_available, False)
-        self.assertEqual(_.reply_code, 0)
+        self.assertEqual(_.aa, False)
+        self.assertEqual(_.tc, False)
+        self.assertEqual(_.rd, True)
+        self.assertEqual(_.ra, False)
+        self.assertEqual(_.rcode, 0)
 
-        _ = medinas.HeaderFlags.from_wire(b'\x85\x83')
-        self.assertEqual(_.response, True)
+        _, rest = medinas.HeaderFlags.extract_from_wire(b'\x85\x83')
+        self.assertEqual(_.qr, True)
         self.assertEqual(_.opcode, 0)
-        self.assertEqual(_.authoritative, True)
-        self.assertEqual(_.truncated, False)
-        self.assertEqual(_.recursion_desired, True)
-        self.assertEqual(_.recursion_available, True)
-        self.assertEqual(_.reply_code, 3)
+        self.assertEqual(_.aa, True)
+        self.assertEqual(_.tc, False)
+        self.assertEqual(_.rd, True)
+        self.assertEqual(_.ra, True)
+        self.assertEqual(_.rcode, 3)
 
 
 class TestQuestion(TestCase):
