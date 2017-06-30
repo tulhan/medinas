@@ -1,4 +1,5 @@
 # coding=utf-8
+import struct
 import unittest
 from unittest import TestCase
 
@@ -62,6 +63,20 @@ class TestMessage(TestCase):
         _.add_question('www.microsoft.com', medinas.Type.A)
         self.assertEqual(bytes(_)[2:], message_on_the_wire[2:])
 
+        _ = medinas.Message.from_wire(message_on_the_wire)
+        self.assertEqual(_.header.id, struct.unpack('>H', b'\xb4\xf2'))
+        self.assertEqual(_.header.count.qd, 1)
+        self.assertEqual(str(_.questions[0].name), 'www.microsoft.com')
+
+
+class TestMessageHeader(TestCase):
+    def test_message_header(self):
+        x = b'\xc2\xf5\x01\x00\x00\x01\x00\x00\x00\x00\x00\x01'
+        flags = medinas.HeaderFlags()
+        count = medinas.RecordsCount(1, 0, 0, 1)
+        _ = medinas.MessageHeader(None, flags, count)
+        self.assertEqual(bytes(_)[2:], x[2:])
+
 
 class TestHeaderFlags(TestCase):
     def test_header_flags(self):
@@ -89,6 +104,19 @@ class TestHeaderFlags(TestCase):
         self.assertEqual(_.rd, True)
         self.assertEqual(_.ra, True)
         self.assertEqual(_.rcode, 3)
+
+
+class TestRecordsCount(TestCase):
+    def test_records_count(self):
+        x = b'\x00\x01\x00\x02\x00\x03\x00\x04'
+        _ = medinas.RecordsCount(1, 2, 3, 4)
+        self.assertEqual(bytes(_), x)
+
+        _, rest = medinas.RecordsCount.extract_from_wire(x)
+        self.assertEqual(_.qd, 1)
+        self.assertEqual(_.an, 2)
+        self.assertEqual(_.ns, 3)
+        self.assertEqual(_.ar, 4)
 
 
 class TestQuestion(TestCase):

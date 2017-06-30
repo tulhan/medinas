@@ -114,7 +114,14 @@ class Message(object):
     @classmethod
     def from_wire(cls, wire):
         """Encodes a DNS message from binary to a Message object"""
-        pass
+        header, wire = MessageHeader.extract_from_wire(wire)
+        questions = []
+
+        for _ in range(header.count.qd):
+            question, wire = Question.extract_from_wire(wire)
+            questions.append(question)
+
+        return cls(header, questions)
 
 
 class MessageHeader(object):
@@ -137,7 +144,7 @@ class MessageHeader(object):
         """Extracts message header from wire dump"""
         id, wire = wire[:2], wire[2:]
         id = struct.unpack('>H', id)
-        flags, wire = HeaderFlags.extract_from_wire(wire[2:])
+        flags, wire = HeaderFlags.extract_from_wire(wire)
         count, wire = RecordsCount.extract_from_wire(wire)
         return cls(id, flags, count), wire
 
@@ -205,7 +212,8 @@ class RecordsCount(object):
         counts = wire[:8]
         wire = wire[8:]
 
-        return cls(struct.unpack('>HHHH', counts)), wire
+        qd, an, ns, ar = struct.unpack('>HHHH', counts)
+        return cls(qd, an, ns, ar), wire
 
 
 class Question(object):
